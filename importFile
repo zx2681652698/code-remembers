@@ -1,0 +1,95 @@
+  @ResponseBody
+	@PostMapping(value = "/question", produces = { "application/json;charset=UTF-8" })
+	public Object importQuestion(HttpServletRequest request, @RequestParam("importFile") MultipartFile file, Integer skillNodeId, Integer knowledgeNodeId){
+		//记录类的输出信息
+		//获取Excel文档的路径
+		String fileName = file.getOriginalFilename();
+		String filePath = "E:\\import\\"+fileName; //要导入的Excel文件的路径
+		log.info("filePath="+filePath);
+		try {
+           // 创建对Excel工作簿文件的引用
+			XSSFWorkbook wookbook = new XSSFWorkbook(new FileInputStream(filePath));
+           // 在Excel文档中，第一张工作表的缺省索引是0
+           // 其语句为：HSSFSheet sheet = workbook.getSheetAt(0);
+			log.info("nums="+wookbook.getNumberOfSheets());
+		    for (int s = 0; s < wookbook.getNumberOfSheets(); s++) {//获取每个Sheet表
+			   //XSSFSheet sheet = wookbook.getSheet("knowledgePersonal");
+			   XSSFSheet sheet = wookbook.getSheetAt(s);
+	           //获取到Excel文件中的所有行数
+	           int rows = sheet.getPhysicalNumberOfRows();
+	           //Date date = new Date();
+	           //遍历行：第一行是表头，所以从第二行开始。
+	           for (int i = 1; i < rows; i++) {
+	        	   // 读取左上端单元格
+	        	   XSSFRow row = sheet.getRow(i);
+	        	   // 行不为空
+	        	   if (row != null) {
+	        		   /** 导入题目信息 */
+	        		   String no = generateNoService.generateQuestionNo(); //题目编号
+	        		   log.info("no="+no);
+	        		   Integer questionTypeId = 1;
+	        		   if(row.getCell(7).getStringCellValue().equals("多选题")) {
+	        			   questionTypeId = 2;
+	        		   }else if(row.getCell(7).getStringCellValue().equals("问答题")) {
+	        			   questionTypeId = 4;
+	        		   }
+	        		   log.info("questionTypeId="+questionTypeId);
+	        		   String qTrunk = row.getCell(1).getStringCellValue();
+	        		   String correctAnswer = row.getCell(6).getStringCellValue();
+	        		   String qStatus = null;
+	        		   if(sheet.getSheetName().indexOf("sheet") == -1) {
+	        			   qStatus = sheet.getSheetName();
+	        		   }
+	        		   String explanation = null; //保存页码
+	        		   String scoringStandard = row.getCell(6).getStringCellValue(); //保存问答题的答案
+	        		   Integer tpcId = Double.valueOf(row.getCell(8).getNumericCellValue()).intValue();
+	        		   log.info("tpcId="+tpcId);
+	        		   List<AnswerOption> answerOptions = new ArrayList<>();
+	                   String optionNo = "A";
+	                   for(int m=0; m<4; m++) {
+	                	   if(m > 0) {
+		                	   char[] char_no = optionNo.toCharArray();
+		                	   if((int)(char_no[0]) >= 65 && (int)(char_no[0]) <= 90){
+		                		   optionNo = String.valueOf((char)(((int)(char_no[0])) + 1));
+		                	   }
+		                   }
+	                	   int n = m + 2;
+	                	   AnswerOption answerOption = new AnswerOption();
+		                   answerOption.setOptionNo(optionNo);
+		                   String optionContent = "";
+		                   log.info("getCellType="+row.getCell(n).getCellType());
+		                   if(row.getCell(n).getCellType() == 1) { //字符串型
+		                	   optionContent = row.getCell(n).getStringCellValue();
+		                	   
+		                   }else if(row.getCell(n).getCellType() == 0){ //数值型
+		                	   optionContent = String.valueOf(row.getCell(n).getNumericCellValue());
+		                	   
+		                   }else if(row.getCell(n).getCellType() == 3) { //空值(有可能该单元格存放的是图片,或者是什么内容都没有)
+		                	   log.info("val="+String.valueOf(row.getCell(n).getNumericCellValue()));
+		                	   log.info("flag="+String.valueOf(row.getCell(n).getNumericCellValue()).equals("0.0"));
+		                	   break;
+		                   }
+		                   if(optionContent.indexOf("<") > -1) {
+		                	   optionContent.replace("<", "&lt");
+		                   }
+		                   if(optionContent.indexOf(">") > -1) {
+		                	   optionContent.replace(">", "&gt");
+		                   }
+		                   answerOption.setOptionContent(optionContent);
+		                   answerOptions.add(answerOption);
+	                   }
+                     //向数据库保存数据（未附方法，视情况而定）
+	                   importService.saveQuestion(no, qStatus, questionTypeId, qTrunk, correctAnswer, scoringStandard, answerOptions, 
+	                		   explanation, skillNodeId, knowledgeNodeId, tpcId, getUser().getStaff());
+	        	   }
+	           }
+		   }
+		   wookbook.close();
+           
+		} catch (FileNotFoundException e) {
+		         e.printStackTrace();
+		} catch (IOException e) {
+		         e.printStackTrace();
+		}
+		return mapSuccess();
+	}
