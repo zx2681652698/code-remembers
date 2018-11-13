@@ -1,0 +1,90 @@
+@Transactional
+	@Test
+	public void tempServiceTest() throws Exception {
+		String fileName = "Export2.xlsx"; //导出文件的名称
+		String sheetName = "sheet1";
+		File dir = new File("E:/export/question"); //保存路径
+		System.out.println(dir.isDirectory());
+		System.out.println(dir.exists());
+		if(dir.isDirectory() && !dir.exists()) {
+			System.out.println("开始创建文件夹");
+			dir.mkdir();
+		}
+		File file = new File(dir +"/"+ fileName);
+		if(file.exists() && file.isFile()) {
+			System.out.println("开始删除文件");
+			file.delete();
+		}
+		XSSFWorkbook workbook = new XSSFWorkbook();
+		XSSFSheet sheet = workbook.createSheet(sheetName);
+		//创建sheet中的第一行
+		XSSFRow row = sheet.createRow(0);
+		//设置单元格格式（居中）
+		XSSFCellStyle style = workbook.createCellStyle();
+		style.setAlignment(XSSFCellStyle.ALIGN_CENTER);
+		//设置字体
+		XSSFFont font = workbook.createFont();
+		font.setFontName("微软雅黑");
+		font.setBoldweight(XSSFFont.BOLDWEIGHT_BOLD); //加粗
+		font.setFontHeightInPoints((short) 12);
+		style.setFont(font);
+		
+		//创建单元格
+		XSSFCell cell = row.createCell(0);
+		cell.setCellValue("Question");
+		cell.setCellStyle(style);
+		cell = row.createCell(1);
+		cell.setCellValue("Answer-A");
+		cell.setCellStyle(style);
+		cell = row.createCell(2);
+		cell.setCellValue("Answer-B");
+		cell.setCellStyle(style);
+		cell = row.createCell(3);
+		cell.setCellValue("Answer-C");
+		cell.setCellStyle(style);
+		cell = row.createCell(4);
+		cell.setCellValue("Answer-D");
+		cell.setCellStyle(style);
+		cell = row.createCell(5);
+		cell.setCellValue("StandardAnswers");
+		cell.setCellStyle(style);
+		
+		//获取数据
+		//List<TestRecord> testRecords = dao.find("from TestRecord tr where tr.member.id between(?) and (?) order by tr.member.id", 456, 805);
+		//List<TrainingRecord> trainRecords = dao.find("from TrainingRecord tr order by tr.trainingCourseware.id");
+		List<Integer> questionIds = dao.find("select tq.question.id from TestQuestion tq where tq.testPaper.id=?", 2249);
+		List<ChoiceQuestion> choiceQuestions = dao.find("from ChoiceQuestion cq where cq.question.id in(?)", questionIds);
+		System.out.println("size="+choiceQuestions.size());
+		
+		//向sheet中添加数据
+		int i = 1;
+		for(ChoiceQuestion cq:choiceQuestions) {
+			row = sheet.createRow(i++);
+			row.createCell(0).setCellValue(cq.getQuestionTrunk());
+			row.createCell(1).setCellValue(cq.getAnswerOptions().get(0).getOptionContent());
+			row.createCell(2).setCellValue(cq.getAnswerOptions().get(1).getOptionContent());
+			row.createCell(3).setCellValue(cq.getAnswerOptions().get(2).getOptionContent());
+			row.createCell(4).setCellValue(cq.getAnswerOptions().get(3).getOptionContent());
+			row.createCell(5).setCellValue(cq.getStandardAnswer());
+			/*if(tr.getStatus().equals("1")) {
+				XSSFCellStyle cellStyle = workbook.createCellStyle();
+				cellStyle.setFillForegroundColor((short) 4);// 设置背景色    
+				cellStyle.setFillPattern(XSSFCellStyle.SOLID_FOREGROUND);
+				XSSFCell c = row.createCell(6);
+				c.setCellValue(tr.getStatus());
+				c.setCellStyle(cellStyle);
+			}else {
+				row.createCell(6).setCellValue(tr.getStatus());
+			}*/
+		}
+		//将文件保存到指定位置
+		try {
+            FileOutputStream fout = new FileOutputStream("E:/export/question/"+fileName);    
+            workbook.write(fout);    
+            fout.close();
+            
+        }catch (Exception e) {    
+            e.printStackTrace();    
+        } 
+		System.out.println("导出成功");
+	}
