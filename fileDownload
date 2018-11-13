@@ -1,0 +1,46 @@
+  
+  /** 要下载的文件需要放到项目里，方便取路径 */
+  @ResponseBody
+	@PostMapping(value = "/template", produces = { "application/json;charset=UTF-8" })
+	public void imageUpload(HttpServletResponse response,HttpServletRequest request){
+		//根据条件得到文件路径
+		String fileName = "question-template.xls";
+		String fileUrl = request.getSession().getServletContext().getRealPath("data/files/"+fileName);
+		log.info("====文件路径==="+fileUrl);
+		File file = new File(fileUrl);
+		try{
+			//将文件读入文件流
+			FileInputStream inStream = new FileInputStream(file);
+			//获得浏览器代理信息
+			final String userAgent = request.getHeader("USER-AGENT");
+			//判断浏览器代理并分别设置响应给浏览器的编码格式
+			String finalFileName = null;
+			if(StringUtils.contains(userAgent, "MSIE")||StringUtils.contains(userAgent,"Trident")){//IE浏览器
+				finalFileName = URLEncoder.encode(fileName,"UTF8");
+				System.out.println("IE浏览器");
+			}else if(StringUtils.contains(userAgent, "Mozilla")){//google,火狐浏览器
+				finalFileName = new String(fileName.getBytes(), "ISO8859-1");
+			}else{
+				finalFileName = URLEncoder.encode(fileName,"UTF8");//其他浏览器
+			}
+		
+			//设置HTTP响应头
+			response.reset();//重置 响应头
+			response.setContentType("application/x-download");//告知浏览器下载文件，而不是直接打开，浏览器默认为打开
+			response.addHeader("Content-Disposition" ,"attachment;filename=\"" +finalFileName+ "\"");//下载文件的名称
+			log.info(fileName);
+			// 循环取出流中的数据
+			byte[] b = new byte[1024];
+			int len;
+			while ((len = inStream.read(b)) > 0){
+				response.getOutputStream().write(b, 0, len);
+			}
+			inStream.close();
+			response.getOutputStream().close();
+		
+		}catch(Exception e) {
+			e.printStackTrace();
+			log.info("==========出错了！！===========");
+		}
+		log.info("============成功了！！===========");
+	}
