@@ -1,0 +1,66 @@
+  
+  import java.sql.ResultSet;
+  import java.sql.Blob;
+  import java.io.OutputStream;
+  @Test
+	public void exportImagesTest() throws Exception {
+		//读取图片出来，保存到本地的磁盘上面  
+		String sql = "select ze.name, ze.IDNo, ze.photo from zh_examinee ze";   
+		DBHelper db1 = new DBHelper(sql);//创建DBHelper对象  
+		try{
+			ResultSet ret = db1.pst.executeQuery();//执行语句，得到结果集  
+			while (ret.next()) {  
+    		   Blob blob = ret.getBlob("photo");
+    		   System.out.println("ret.getString(2)="+ret.getString(2)); //ret.getString(index); index从1开始
+    		   String s1="E:\\export\\images\\"+ret.getString(2)+".png"; 
+    		   System.out.println("s1="+s1);
+               File file2 = new File(s1); 
+               OutputStream outputStream = new FileOutputStream(file2);     
+               outputStream.write(blob.getBytes(1,(int)blob.length()));    
+                 //打印出来的为对象     
+               System.out.println("图片名称 ："+ret.getString(2)+",图片内容: "+ blob.getBinaryStream()); 
+			}
+		}catch(SQLException e){
+			e.printStackTrace();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+  
+  
+/************************************** 配置数据库连接 ********************************************/  
+  package test.context;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+ 
+public class DBHelper {
+	 public static final String url = "jdbc:mysql://192.168.0.240/exam";  
+	    public static final String name = "com.mysql.jdbc.Driver";  
+	    public static final String user = "root";  
+	    public static final String password = "123456"; 
+	    
+	    public Connection conn = null;  
+	    public PreparedStatement pst = null;  
+	    public DBHelper(String sql) {  
+	    	 try {  
+	             Class.forName(name);//指定连接类型  
+	             conn = DriverManager.getConnection(url, user, password);//获取连接  
+	             pst = conn.prepareStatement(sql);//准备执行语句  
+	         } catch (Exception e) {  
+	             e.printStackTrace();  
+	         }  
+	    }
+	    public void close() {  
+	        try {  
+	            this.conn.close();  
+	            this.pst.close();  
+	        } catch (SQLException e) {  
+	            e.printStackTrace();  
+	        }  
+	    }  
+}
