@@ -1,34 +1,53 @@
-  @ResponseBody
+  	import org.apache.poi.ss.usermodel.Row;
+	import org.apache.poi.ss.usermodel.Sheet;
+	import org.apache.poi.ss.usermodel.Workbook;
+	import org.apache.poi.ss.usermodel.WorkbookFactory;
+	import java.io.FileInputStream;
+
+	@ResponseBody
 	@PostMapping(value = "/question", produces = { "application/json;charset=UTF-8" })
-	public Object importQuestion(HttpServletRequest request, @RequestParam("importFile") MultipartFile file, Integer skillNodeId, Integer knowledgeNodeId){
+	public Object importQuestion(HttpServletRequest request, @RequestParam("importFile") MultipartFile file, Integer skillNodeId, Integer knowledgeNodeId) throws Exception{
 		//记录类的输出信息
 		//获取Excel文档的路径
 		String fileName = file.getOriginalFilename();
 		String filePath = "E:\\import\\"+fileName; //要导入的Excel文件的路径
 		log.info("filePath="+filePath);
 		try {
-           // 创建对Excel工作簿文件的引用
-			XSSFWorkbook wookbook = new XSSFWorkbook(new FileInputStream(filePath));
-           // 在Excel文档中，第一张工作表的缺省索引是0
-           // 其语句为：HSSFSheet sheet = workbook.getSheetAt(0);
+           		//获取文件后缀(2003)xls|(2007)xlsx
+			/*String suffix = fileName.substring(fileName.lastIndexOf("."));
+			if(suffix.equals("xls")) {
+				Workbook workbook = new HSSFWorkbook(new FileInputStream(filePath));
+			}else if(suffix.equals("xlsx")) {
+				Workbook workbook = new XSSFWorkbook(new FileInputStream(filePath));
+			}*/
+			//推荐使用poi-ooxml中的WorkbookFactory.create(is)来创建Workbook, 因为HSSFWorkbook和XSSFWorkbook都实现了Workbook接口
+			Workbook wookbook = WorkbookFactory.create(new FileInputStream(filePath));
+			// 创建对Excel工作簿文件的引用
+			//XSSFWorkbook wookbook = new XSSFWorkbook(new FileInputStream(filePath));
+			// 在Excel文档中，第一张工作表的缺省索引是0。其语句为：HSSFSheet sheet = workbook.getSheetAt(0);
 			log.info("nums="+wookbook.getNumberOfSheets());
 		    for (int s = 0; s < wookbook.getNumberOfSheets(); s++) {//获取每个Sheet表
-			   //XSSFSheet sheet = wookbook.getSheet("knowledgePersonal");
-			   XSSFSheet sheet = wookbook.getSheetAt(s);
+			   //Sheet sheet = wookbook.getSheet("knowledgePersonal");
+			   Sheet sheet = wookbook.getSheetAt(s);
 	           //获取到Excel文件中的所有行数
 	           int rows = sheet.getPhysicalNumberOfRows();
 	           //Date date = new Date();
 	           //遍历行：第一行是表头，所以从第二行开始。
 	           for (int i = 1; i < rows; i++) {
 	        	   // 读取左上端单元格
-	        	   XSSFRow row = sheet.getRow(i);
+	        	   Row row = sheet.getRow(i);
 	        	   // 行不为空
 	        	   if (row != null) {
 	        		   /** 导入题目信息 */
+				   if(row.getCell(1).getCellType() == 3 || row.getCell(1).getStringCellValue().indexOf("题干") > -1) {
+	        			   continue;
+	        		   }
 	        		   String no = generateNoService.generateQuestionNo(); //题目编号
 	        		   log.info("no="+no);
-	        		   Integer questionTypeId = 1;
-	        		   if(row.getCell(7).getStringCellValue().equals("多选题")) {
+	        		   Integer questionTypeId = 0;
+	        		   if(row.getCell(7).getStringCellValue().equals("单选题")) {
+	        			   questionTypeId = 1;
+	        		   }else if(row.getCell(7).getStringCellValue().equals("多选题")) {
 	        			   questionTypeId = 2;
 	        		   }else if(row.getCell(7).getStringCellValue().equals("问答题")) {
 	        			   questionTypeId = 4;
@@ -42,7 +61,10 @@
 	        		   }
 	        		   String explanation = null; //保存页码
 	        		   String scoringStandard = row.getCell(6).getStringCellValue(); //保存问答题的答案
-	        		   Integer tpcId = Double.valueOf(row.getCell(8).getNumericCellValue()).intValue();
+	        		   Integer tpcId = 0;
+	        		   if(row.getCell(8) != null) {
+	        			   tpcId = Double.valueOf(row.getCell(8).getNumericCellValue()).intValue();
+	        		   }
 	        		   log.info("tpcId="+tpcId);
 	        		   List<AnswerOption> answerOptions = new ArrayList<>();
 	                   String optionNo = "A";
