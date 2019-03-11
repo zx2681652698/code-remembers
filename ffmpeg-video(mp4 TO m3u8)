@@ -1,0 +1,45 @@
+
+  @Test
+	public void ffmpegTest() throws Exception {
+		System.out.println("开始切割");
+		String ffmpegPath = "C:\\ffmpeg-win32\\bin\\ffmpeg.exe"; //获取ffmpeg.exe的绝对路径
+		//String ffmpegPath = System.getProperty("os.name").toLowerCase().contains("windows") ? new File("tools/windows/ffmpeg").getAbsolutePath() : new File("tools/linux/ffmpeg").getAbsolutePath();
+		File videoPath = new File("F:\\zx备份\\广西工贸课程视频\\wlyxVideo"); //获取存放MP4视频的文件夹的路径
+		String[] fileNames = videoPath.list(); //获取wlyxVideo文件夹下的所有文件名称（包括文件夹和文件，并且文件的名称带后缀）
+		for (int i=0; i<fileNames.length; i++) {
+			String fileName = fileNames[i].split("\\.")[0];
+			File newPath = new File("F:\\zx备份\\广西工贸课程视频\\files\\"+ fileName); //获取切割之后的文件需要存放的路径
+			System.out.println("newPath="+newPath);
+			newPath.mkdir(); //创建名称为fileName的文件夹
+			String filePath = "F:\\zx备份\\广西工贸课程视频\\wlyxVideo\\"+ fileName +".mp4"; //MP4视频文件的路径
+			String snippetPath = "F:\\zx备份\\广西工贸课程视频\\files\\"+ fileName +"\\"+ fileName +".m3u8"; //m3u8切片文件的路径
+			//拼接使用ffmpeg做视频切片的命令
+      StringBuffer command = new StringBuffer();
+			command.append(ffmpegPath);
+			command.append(" -i ");
+			command.append(filePath);
+			command.append(" -c:v libx264 -c:a copy -f hls -threads 8 -hls_time 60 -hls_list_size 0 ");
+			command.append(snippetPath);
+			System.out.println("command=" + command.toString());
+			Runtime rt = Runtime.getRuntime();
+			try {
+				System.out.println("进入try");
+				Process proc = rt.exec(command.toString()); //Windows下执行系统命令
+				InputStream stderr = proc.getErrorStream();
+        //用一个读输入流类去读
+				InputStreamReader isr = new InputStreamReader(stderr);
+        //用缓冲器读行
+				BufferedReader br = new BufferedReader(isr);
+				String line = null;
+        //直到读完为止
+				while ((line = br.readLine()) != null)
+					System.out.println(line);
+				int exitVal = proc.waitFor();
+				System.out.println("exitVal=" + exitVal);
+			} catch (Exception e) {
+				System.out.println("异常");
+				e.printStackTrace();
+			}
+			System.out.println("切割完成="+i);
+		}
+	}
